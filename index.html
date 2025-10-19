@@ -1,0 +1,352 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>عجلة الهدايا</title>
+<meta name="theme-color" content="#111">
+<style>
+  :root {
+    --bg:#0f1115;
+    --panel:#151922;
+    --accent:#ffb703;
+    --accent2:#00d1b2;
+    --text:#e7ecf3;
+    --muted:#94a3b8;
+    --btn:#ff7b00;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;
+    font-family:system-ui, -apple-system, Segoe UI, Roboto, "Noto Kufi Arabic", "Noto Sans", Tahoma, Arial, sans-serif;
+    background: radial-gradient(1200px 800px at 50% 10%, #18202c 0%, #0f1115 60%, #0b0d11 100%);
+    color:var(--text);
+    display:flex;align-items:center;justify-content:center;
+  }
+  .wrap{
+    width:min(100vw,720px);
+    padding:20px;
+  }
+  .card{
+    background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+    border:1px solid rgba(255,255,255,0.08);
+    border-radius:18px;
+    box-shadow:0 10px 30px rgba(0,0,0,0.35), inset 0 0 60px rgba(255,255,255,0.02);
+    padding:18px;
+  }
+  header{
+    display:flex; align-items:center; justify-content:space-between; gap:12px;
+    margin-bottom:10px;
+  }
+  header .brand{
+    display:flex; align-items:center; gap:10px;
+    font-weight:700; letter-spacing:.2px;
+  }
+  .brand .dot{width:10px;height:10px;border-radius:50%;background:var(--accent)}
+  .hint{color:var(--muted); font-size:.9rem}
+  .stage{
+    display:grid; place-items:center;
+    padding:14px; border-radius:14px; background:rgba(255,255,255,0.02);
+  }
+  .wheel-wrap{position:relative; width:min(86vw, 480px); aspect-ratio:1/1; }
+  svg#wheel{width:100%;height:100%; transform:rotate(0deg); transition:transform 4.8s cubic-bezier(.12,.78,.18,1); will-change:transform; filter:drop-shadow(0 8px 24px rgba(0,0,0,0.45));}
+  .pin{
+    position:absolute; inset:auto 0 auto 0; top:-8px; margin-inline:auto; width:0;height:0;
+    border-left:16px solid transparent;border-right:16px solid transparent;border-top:28px solid var(--accent);
+    filter: drop-shadow(0 4px 10px rgba(0,0,0,.4));
+  }
+  .hub{
+    position:absolute; inset:0; display:grid; place-items:center; pointer-events:none;
+  }
+  .hub .inner{
+    width:82px;height:82px;border-radius:50%;
+    background:radial-gradient(circle at 65% 35%, #fff8, #fff2 40%, #0003 80%, transparent),
+               linear-gradient(135deg, #222 0%, #0f1115 100%);
+    border:2px solid rgba(255,255,255,.18);
+    box-shadow:inset 0 2px 10px rgba(0,0,0,.6), 0 2px 8px rgba(0,0,0,.6);
+  }
+  .controls{display:flex; gap:10px; margin-top:14px; flex-wrap:wrap; justify-content:center}
+  button{
+    appearance:none; border:none; cursor:pointer;
+    background:linear-gradient(180deg, #ff8c1a, #ff7b00);
+    color:#111; font-weight:800; letter-spacing:.2px;
+    padding:12px 18px; border-radius:10px; font-size:1.05rem;
+    box-shadow:0 6px 18px rgba(255,123,0,.25);
+  }
+  button[disabled]{opacity:.6; cursor:not-allowed; filter:grayscale(.2)}
+  .ghost{
+    background:transparent; color:var(--muted); border:1px solid rgba(255,255,255,.12);
+    box-shadow:none;
+  }
+  .notice{margin-top:8px; text-align:center; color:var(--muted); font-size:.9rem}
+  /* Result modal */
+  .modal{position:fixed; inset:0; display:none; place-items:center; background:rgba(0,0,0,.55);}
+  .modal.show{display:grid}
+  .modal .box{
+    width:min(92vw,520px);
+    background:linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02));
+    border:1px solid rgba(255,255,255,0.1); border-radius:16px; padding:18px;
+    box-shadow:0 20px 60px rgba(0,0,0,.45);
+  }
+  .box h2{margin:.2rem 0 .6rem; font-size:1.35rem}
+  .row{display:flex; gap:10px; flex-wrap:wrap; align-items:center}
+  .kudo{
+    padding:8px 10px; border-radius:10px; background:#0f172a; color:#e2e8f0; font-weight:700;
+    border:1px dashed rgba(255,255,255,.18);
+  }
+  .actions{display:flex; gap:10px; margin-top:12px; justify-content:flex-end}
+  .sr{position:absolute; width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+  canvas#confetti{position:fixed; inset:0; pointer-events:none}
+</style>
+</head>
+<body>
+<canvas id="confetti"></canvas>
+<div class="wrap">
+  <div class="card">
+    <header>
+      <div class="brand"><span class="dot"></span> عجلة الهدايا</div>
+      <div class="hint">امسح QR وشغل الصفحة – لفة واحدة لكل جهاز</div>
+    </header>
+
+    <div class="stage">
+      <div class="wheel-wrap">
+        <div class="pin" aria-hidden="true"></div>
+        <svg id="wheel" viewBox="0 0 1000 1000" aria-label="عجلة الجوائز"></svg>
+        <div class="hub"><div class="inner"></div></div>
+      </div>
+
+      <div class="controls">
+        <button id="spinBtn">لف العجلة 🎡</button>
+        <button id="resetBtn" class="ghost">إعادة للاختبار</button>
+      </div>
+      <div id="note" class="notice"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Result Modal -->
+<div id="modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="ttl">
+  <div class="box">
+    <h2 id="ttl">🎉 مبروك!</h2>
+    <p id="msg">لقد ربحت <b id="prizeTxt"></b></p>
+    <div class="row">
+      <div class="kudo">كودك: <span id="code">WELCOME10</span></div>
+      <button id="copy" class="ghost">نسخ الكود</button>
+    </div>
+    <div class="actions">
+      <button id="close" class="ghost">إغلاق</button>
+      <a id="cta" href="#" target="_blank" rel="noopener">
+        <button>استخدم العرض الآن</button>
+      </a>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===== Config =====
+const CONFIG = {
+  // جوائز القطاعات (يمكن تعديلها بحرّية)
+  prizes: [
+    { label: "خصم 10%", code: "DISC10" },
+    { label: "شحن مجاني", code: "SHIPFREE" },
+    { label: "خصم 5%", code: "DISC5" },
+    { label: "هدية مجانية", code: "GIFT1" },
+    { label: "خصم 15%", code: "DISC15" },
+    { label: "خصم 20%", code: "DISC20" },
+    { label: "قسيمة 50 جنيه", code: "V50" },
+    { label: "محاولة ثانية", code: "TRYAGAIN" }
+  ],
+  colors: ["#ff7b00","#e62e00","#ffb366","#009933","#3399ff","#9933ff","#ffd166","#06d6a0"],
+  baseSpins: 6,            // عدد اللفات الأساسية قبل التوقف
+  spinDuration: 4.8,       // مدة اللفّة بالثواني
+  oneSpinPerDevice: true,  // منع اللفات المتعددة
+  shopUrl: "#",            // رابط CTA
+};
+
+const qs = new URLSearchParams(location.search);
+const forceIndexParam = qs.get("prize"); // مثال: ?prize=3 لاختبار قطاع محدد
+const resetParam = qs.has("reset");
+
+const wheelSvg = document.getElementById("wheel");
+const spinBtn = document.getElementById("spinBtn");
+const resetBtn = document.getElementById("resetBtn");
+const note = document.getElementById("note");
+
+const modal = document.getElementById("modal");
+const prizeTxt = document.getElementById("prizeTxt");
+const codeSpan = document.getElementById("code");
+const copyBtn = document.getElementById("copy");
+const closeBtn = document.getElementById("close");
+const cta = document.getElementById("cta");
+
+cta.href = CONFIG.shopUrl;
+
+// Build wheel (SVG segments)
+function buildWheel(){
+  const N = CONFIG.prizes.length;
+  const center = 500, r = 480;
+  const seg = 360 / N;
+  for(let i=0;i<N;i++){
+    const start = (i*seg-90) * Math.PI/180; // -90 لتكون البداية من أعلى (المؤشر)
+    const end = ((i+1)*seg-90) * Math.PI/180;
+    const x1 = center + r * Math.cos(start), y1 = center + r * Math.sin(start);
+    const x2 = center + r * Math.cos(end),   y2 = center + r * Math.sin(end);
+    const large = (seg > 180) ? 1 : 0;
+    const path = `M ${center} ${center} L ${x1} ${y1} A ${r} ${r} 0 ${large} 1 ${x2} ${y2} Z`;
+
+    const g = document.createElementNS("http://www.w3.org/2000/svg","g");
+    const p = document.createElementNS("http://www.w3.org/2000/svg","path");
+    p.setAttribute("d", path);
+    p.setAttribute("fill", CONFIG.colors[i % CONFIG.colors.length]);
+    p.setAttribute("stroke","rgba(0,0,0,.25)");
+    p.setAttribute("stroke-width","2");
+    g.appendChild(p);
+
+    // Text
+    const midAngle = (i+0.5)*seg - 90;
+    const tx = center + (r*0.62) * Math.cos(midAngle * Math.PI/180);
+    const ty = center + (r*0.62) * Math.sin(midAngle * Math.PI/180);
+    const text = document.createElementNS("http://www.w3.org/2000/svg","text");
+    text.setAttribute("x", tx); text.setAttribute("y", ty);
+    text.setAttribute("fill","#fff"); text.setAttribute("font-size","28");
+    text.setAttribute("font-weight","700");
+    text.setAttribute("text-anchor","middle");
+    text.setAttribute("dominant-baseline","middle");
+    text.setAttribute("transform", `rotate(${midAngle+90} ${tx} ${ty})`);
+    text.textContent = CONFIG.prizes[i].label;
+    g.appendChild(text);
+
+    wheelSvg.appendChild(g);
+  }
+}
+buildWheel();
+
+// One-spin-per-device
+const SPIN_KEY = "spinwheel-played";
+if(CONFIG.oneSpinPerDevice && localStorage.getItem(SPIN_KEY) && !resetParam){
+  spinBtn.disabled = true;
+  note.textContent = "لقد استخدمت فرصة اللفة بالفعل على هذا الجهاز.";
+}
+
+resetBtn.addEventListener("click", ()=>{
+  localStorage.removeItem(SPIN_KEY);
+  location.href = location.pathname; // يعيد التحميل بدون بارامترات
+});
+
+let spinning = false;
+let currentRotation = 0;
+
+function spin(){
+  if(spinning) return;
+  if(CONFIG.oneSpinPerDevice && localStorage.getItem(SPIN_KEY)){
+    note.textContent = "فرصتك خلصت—يرجى المحاولة من جهاز آخر.";
+    return;
+  }
+  spinning = true;
+  spinBtn.disabled = true;
+  note.textContent = "جاري اللف...";
+
+  const N = CONFIG.prizes.length;
+  const seg = 360 / N;
+
+  // حدد القطاع الفائز
+  let winIndex;
+  if(forceIndexParam !== null){
+    const idx = parseInt(forceIndexParam, 10);
+    winIndex = isFinite(idx) ? ((idx % N) + N) % N : Math.floor(Math.random()*N);
+  } else {
+    winIndex = Math.floor(Math.random()*N);
+  }
+
+  // زاوية منتصف القطاع المختار (من أعلى حيث المؤشر)
+  const targetAngleFromTop = winIndex * seg + seg/2; // 0 أعلى باتجاه عقارب الساعة
+  // نريد تدوير العجلة بحيث منتصف القطاع يصل لأعلى (0deg بعد التحويل)
+  const base = CONFIG.baseSpins * 360;
+  // تحويل لاتجاه SVG (العجلة تدور مع عقارب الساعة، المؤشر ثابت بالأعلى)
+  const finalRotation = base + (360 - targetAngleFromTop);
+
+  wheelSvg.style.transitionDuration = CONFIG.spinDuration + "s";
+  currentRotation = finalRotation;
+  wheelSvg.style.transform = `rotate(${finalRotation}deg)`;
+
+  setTimeout(()=>{
+    // ثبت النتيجة وامنع محاولات أخرى
+    localStorage.setItem(SPIN_KEY, "1");
+    spinning = false;
+    note.textContent = "انتهت اللفة.";
+
+    const prize = CONFIG.prizes[winIndex];
+    showResult(prize);
+    confettiBurst();
+  }, CONFIG.spinDuration*1000 + 120);
+}
+
+spinBtn.addEventListener("click", spin);
+
+// ===== Modal & result =====
+function showResult(prize){
+  prizeTxt.textContent = prize.label;
+  codeSpan.textContent = prize.code;
+  modal.classList.add("show");
+}
+
+copyBtn.addEventListener("click", async ()=>{
+  try{
+    await navigator.clipboard.writeText(codeSpan.textContent);
+    copyBtn.textContent = "تم النسخ ✅";
+    setTimeout(()=> copyBtn.textContent = "نسخ الكود", 1500);
+  }catch(e){}
+});
+closeBtn.addEventListener("click", ()=> modal.classList.remove("show"));
+modal.addEventListener("click", (e)=>{ if(e.target === modal) modal.classList.remove("show") });
+
+// ===== Simple confetti =====
+const canvas = document.getElementById("confetti");
+const ctx = canvas.getContext("2d");
+let confettiPieces = [];
+function resize(){ canvas.width = innerWidth; canvas.height = innerHeight; }
+addEventListener("resize", resize); resize();
+function confettiBurst(){
+  const colors = ["#ff7b00","#ffd166","#06d6a0","#118ab2","#ef476f","#8338ec"];
+  for(let i=0;i<180;i++){
+    confettiPieces.push({
+      x: innerWidth/2, y: innerHeight/3,
+      vx: (Math.random()*6-3), vy: (Math.random()*-6-2),
+      g: 0.12 + Math.random()*0.08,
+      size: 3 + Math.random()*4,
+      color: colors[Math.floor(Math.random()*colors.length)],
+      rot: Math.random()*Math.PI, vr: (Math.random()-.5)*0.3,
+      life: 120 + Math.random()*60
+    });
+  }
+}
+function confettiTick(){
+  ctx.clearRect(0,0,canvas.width, canvas.height);
+  confettiPieces = confettiPieces.filter(p=> p.life>0);
+  for(const p of confettiPieces){
+    p.vy += p.g;
+    p.x += p.vx;
+    p.y += p.vy;
+    p.rot += p.vr;
+    p.life--;
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    ctx.rotate(p.rot);
+    ctx.fillStyle = p.color;
+    ctx.fillRect(-p.size/2, -p.size/2, p.size, p.size);
+    ctx.restore();
+  }
+  requestAnimationFrame(confettiTick);
+}
+confettiTick();
+
+// ===== Helper: if ?reset present, clear state UI =====
+if(resetParam){
+  localStorage.removeItem(SPIN_KEY);
+  note.textContent = "وضع الاختبار مُفعل (يمكنك اللف عدة مرات).";
+  spinBtn.disabled = false;
+}
+</script>
+</body>
+</html>
